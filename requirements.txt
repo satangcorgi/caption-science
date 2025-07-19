@@ -1,0 +1,9 @@
+streamlit
+pandas
+numpy
+matplotlib
+seaborn
+textstat
+nltk
+vaderSentiment
+scikit-learn
