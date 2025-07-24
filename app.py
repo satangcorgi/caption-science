@@ -1,16 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Streamlit app: Caption Science
-Deployment-ready version (relative paths, no absolute Mac paths).
-
-Run locally:
-    streamlit run app.py
-
-Folder structure expected (all beside app.py):
-    data/   (all CSV datasets)
-    assets/ (optional static images such as ROC curves)
-"""
-
 import math
 import os
 from pathlib import Path
@@ -22,16 +9,10 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import textstat
 
-# ------------------------------------------------------------------
-# Paths (NO hard-coded absolute paths)
-# ------------------------------------------------------------------
 BASE_DIR = Path(__file__).parent.resolve()
 DATA_DIR = BASE_DIR / "data"
 ASSETS_DIR = BASE_DIR / "assets"
 
-# ------------------------------------------------------------------
-# Core stats / model parameters (unchanged)
-# ------------------------------------------------------------------
 STATS = {
     "Facebook": {
         "mean": np.array([6.88875, -15.38, 69.43, 5.259, 1.378, 14.26,
@@ -114,16 +95,10 @@ ADVICE = {
     }
 }
 
-# ------------------------------------------------------------------
-# Imports that rely on nltk / sentiment
-# ------------------------------------------------------------------
 import unicodedata, re, itertools, nltk
 from nltk.corpus import words as nltk_words, wordnet as wn
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-# ------------------------------------------------------------------
-# Utility: safe CSV read
-# ------------------------------------------------------------------
 def safe_read_csv(path: Path, **kwargs):
     if not path.exists():
         st.warning(f"Missing file: `{path.name}` (expected in `data/`). Feature depending on it is skipped.")
@@ -134,9 +109,6 @@ def safe_read_csv(path: Path, **kwargs):
         st.error(f"Error reading {path.name}: {e}")
         return None
 
-# ------------------------------------------------------------------
-# Data loaders (cached)
-# ------------------------------------------------------------------
 CAPTION_DATA_FILES = {
     "Facebook":  "Caption Science - Facebook F.csv",
     "Instagram": "Caption Science - Instagram F.csv",
@@ -155,7 +127,7 @@ Z_FILES = {
     "TikTok":    "tiktok_z.csv",
 }
 
-VAL_PROB_FILES = {  # logistic regression probs
+VAL_PROB_FILES = {  
     "Facebook":  "fb_val_probs.csv",
     "Instagram": "ig_val_probs.csv",
     "TikTok":    "tk_val_probs.csv",
@@ -181,7 +153,7 @@ def load_caption_raw(platform: str) -> pd.DataFrame | None:
         return None
     if "Emphasis Style (%)" in df.columns:
         df["Emphasis Style (%)"] = df["Emphasis Style (%)"].astype(str).str.replace("%", "", regex=False)
-    # Coerce feature columns
+
     for col in ORDER:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -205,9 +177,6 @@ def load_score_file(plat: str):
 def load_prob_file(mapping: dict, plat: str):
     return safe_read_csv(DATA_DIR / mapping[plat])
 
-# ------------------------------------------------------------------
-# NLP helpers
-# ------------------------------------------------------------------
 @st.cache_resource(show_spinner=False)
 def _nltk_ready():
     nltk.download("words", quiet=True)
@@ -296,9 +265,6 @@ def caption_score(vals: dict, plat: str):
     logit = stx["intercept"] + np.dot(stx["beta"], z)
     return logit, sigmoid(logit) * 100
 
-# ------------------------------------------------------------------
-# Page setup
-# ------------------------------------------------------------------
 st.set_page_config("Caption Science", "🧑🏻‍💻", layout="centered")
 st.title("[🧪 Caption Science – instant caption quantifier](https://docs.google.com/document/d/1Yh2aES8NQLnA74r7HV3-FGM767_dpF8qo6tjUK7AYRQ/edit?usp=sharing)")
 
@@ -308,9 +274,6 @@ with st.sidebar:
     st.write(f"`assets/` exists: {ASSETS_DIR.exists()}")
     st.caption("If a file is missing you'll see a warning in the main area.")
 
-# ------------------------------------------------------------------
-# MAIN: Caption Analysis
-# ------------------------------------------------------------------
 st.header("1. Analyze a caption")
 
 colL, colR = st.columns([3, 2])
@@ -386,7 +349,7 @@ if st.button("Analyze"):
             mid-range rather than shooting straight to 90 %.
             """
         )
-    from pathlib import Path  # (only needed once near top of file)
+    from pathlib import Path  
 
     with st.expander("🔍 Where captions like yours actually appear"):
         df_path = {
@@ -404,13 +367,12 @@ if st.button("Analyze"):
                 s=15, color="gray", alpha=0.5
             )
 
-            # horizontal line = your caption score
             ax.axhline(logit, color="red", lw=2)
 
             ax.set_xlabel("Search Rank")
             ax.set_ylabel("Caption Score")
             ax.set_title(f"{platform}: Score vs Actual Rank")
-            ax.invert_xaxis()  # So Rank 1 is leftmost
+            ax.invert_xaxis()  
 
             st.pyplot(fig)
             st.caption(
@@ -441,9 +403,6 @@ if st.button("Analyze"):
         "prob": prob,
     }
 
-# ------------------------------------------------------------------
-# Score Breakdown
-# ------------------------------------------------------------------
 if st.button("🔍 Explain my caption"):
     if "last_run" not in st.session_state:
         st.error("Run **Analyze** first 🙂")
@@ -487,9 +446,6 @@ if st.button("🔍 Explain my caption"):
             "*z*-score = distance from platform mean  \n"
             "**β×z** = contribution to Caption Score.")
 
-# ------------------------------------------------------------------
-# Dashboard 1: Where my caption stands?
-# ------------------------------------------------------------------
 if st.checkbox("📊 Where my caption stands?"):
 
     if "last_run" not in st.session_state:
@@ -520,9 +476,6 @@ if st.checkbox("📊 Where my caption stands?"):
     bench_Z    = Z[top_mask]
     others_Z   = Z[~top_mask]
 
-    # ───────────────────────────────────────────────────────────────
-    # 🔭 Distribution check – smooth curves in 2-wide rows
-    # ───────────────────────────────────────────────────────────────
     st.markdown("### 🔭 Distribution check (z-scores)")
 
     PAIR_ROWS = [
@@ -541,13 +494,11 @@ if st.checkbox("📊 Where my caption stands?"):
             with cols[i]:
                 fig, ax = plt.subplots(figsize=(3.2, 2.6))
 
-                # benchmark slice
                 sns.kdeplot(
                     bench_Z[:, ORDER.index(attr)],
                     ax=ax, lw=2, color="#4c78a8", label=f"Top {top_x}"
                 )
 
-                # optional rest-of-field slice
                 if show_rest and others_Z.size:
                     sns.kdeplot(
                         others_Z[:, ORDER.index(attr)],
@@ -555,23 +506,19 @@ if st.checkbox("📊 Where my caption stands?"):
                         label=f"{top_x + 1}–100"
                     )
 
-                # your caption
                 ax.axvline(user_z[ORDER.index(attr)], color="red", lw=2)
 
-                # cosmetics
                 ax.set_title(attr, fontsize=9)
                 ax.set_xlim(-3.5, 3.5)
                 ax.set_xticks([-3, -2, -1, 0, 1, 2, 3])
                 ax.set_xlabel("z-score")
                 ax.set_yticks([])
 
-                # legend only once
                 if (row is PAIR_ROWS[0]) and (i == 0) and show_rest:
                     ax.legend(fontsize=6, frameon=False)
 
                 st.pyplot(fig, clear_figure=True)
 
-    # <– one unified caption for the whole grid
     st.caption(
         f"**How to read:** each curve shows where most captions land on this attribute. "
         f"Blue = Top {top_x}, orange = the rest (if shown). Your caption is the red line. "
@@ -669,34 +616,28 @@ if st.checkbox("📊 Where my caption stands?"):
 
     fig_v, ax_v = plt.subplots(figsize=(3.6, 3))
 
-    # build the two slices
     top_slice = Z[ranks <= X, v_idx]
     bottom_slice = Z[ranks > X, v_idx]
 
-    # violin plot (means on)
     ax_v.violinplot(
         [top_slice, bottom_slice],
         showmeans=True, showextrema=False
     )
 
-    # x-tick labels
     ax_v.set_xticks([1, 2])
     ax_v.set_xticklabels([f"Top {X}", f"{X + 1}-100"])
 
     ax_v.set_ylabel(f"{attr_v}  z-score")
 
-    # ── add YOUR caption as a red dot ────────────────────────────
-    your_z = user_z[v_idx]  # already computed earlier
-    # place the dot at x = 1.5 so it sits between the two violins
+    your_z = user_z[v_idx]  
+
     ax_v.scatter(1.5, your_z,
                  color="red", s=60, zorder=5,
                  marker="o", label="You")
 
-    # optional: thin horizontal line across both violins
     ax_v.hlines(your_z, xmin=0.8, xmax=2.2,
                 colors="red", linestyles=":", lw=1)
 
-    # legend (shown only once to keep things tidy)
     ax_v.legend(frameon=False, fontsize=7, loc="upper right")
 
     st.pyplot(fig_v, clear_figure=True)
@@ -709,9 +650,6 @@ if st.checkbox("📊 Where my caption stands?"):
         "If it's far from both, you're doing something unique on this trait!"
     )
 
-# ------------------------------------------------------------------
-# Dashboard 2: Insight (raw values – independent)
-# ------------------------------------------------------------------
 if st.checkbox("📚 Insight dashboard", help=
     "This section explores how caption attributes behave *across all posts*. "
     "It's *independent* from your input. **Think of it as an explorer's map of caption trends**."
@@ -830,9 +768,6 @@ if st.checkbox("📚 Insight dashboard", help=
         "or if it’s more scattered than expected."
     )
 
-# ------------------------------------------------------------------
-# Dashboard 3: Story-telling
-# ------------------------------------------------------------------
 if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
                help="An honest overview of every method we tried to predict search visibility with captions. What worked, what didn’t, and what we learned."):
     st.markdown("## 🧩 We Tried Everything")
@@ -855,8 +790,6 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
         sig_tag = "sig" if p < .05 else "n.s."
         return f"ρ = {rho:+.2f} ({strength}-{direction}) · p = {p:.3f} {sig_tag}"
 
-        # ── choose platform to visualise ─────────────────────────────────
-
     options = ["Facebook", "Instagram", "TikTok"]
     default_plat = st.session_state.get("last_run", {}).get("platform", "Facebook")
 
@@ -864,10 +797,10 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
         "Platform to explore:", options, index=options.index(default_plat)
     )
 
-    df_sc = load_caption_raw(plat_for_scatter)  # already cleaned by your helper
+    df_sc = load_caption_raw(plat_for_scatter)  
 
     st.markdown(f"#### {plat_for_scatter}: each attribute vs. rank")
-    scatter_cols = st.columns(5)  # two rows × 5 = 10 plots
+    scatter_cols = st.columns(5)  
 
     import scipy.stats as ss
 
@@ -875,17 +808,15 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
         with scatter_cols[i % 5]:
             fig, ax = plt.subplots(figsize=(2.6, 2.2))
 
-            #   • rank on X (1 = best, left)   • raw attribute on Y
             ax.scatter(df_sc["Search Rank"],
                        df_sc[attr],
                        s=10, alpha=.55, edgecolors="none")
 
-            ax.invert_xaxis()  # best rank on the left
+            ax.invert_xaxis()  
             ax.set_title(attr, fontsize=7)
             ax.set_xticks([]);
-            ax.set_yticks([])  # clean mini-plot look
+            ax.set_yticks([])  
 
-            # ρ & p-value annotation
             rho, p = ss.spearmanr(df_sc["Search Rank"],
                                   df_sc[attr],
                                   nan_policy="omit")
@@ -902,7 +833,6 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
         "- Dots may overlap if many captions share the same rank."
     )
 
-    # ---------- bar-summary across all platforms (keeps your old plot style) ----------
     for p in ["Facebook", "Instagram", "TikTok"]:
         df = load_caption_raw(p)
         corr = df[ORDER + ["Search Rank"]].corr("spearman")["Search Rank"].drop("Search Rank")
@@ -912,7 +842,6 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
         ax.set_title(f"{p} – correlation to rank (ρ)")
         st.pyplot(fig, clear_figure=True)
 
-    # ---------- legend for readers ----------
     st.markdown("#### How to read the ρ label")
     st.markdown("""
                         | Strength label | ρ range |
@@ -926,16 +855,12 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
                         *Significant* = p < 0.05 · *Not sig.* = p ≥ 0.05
                         """)
 
-    # 2 ▸ Logistic regression
     st.markdown("### 🔁 Logistic regression")
     st.caption(
         "Maybe a combo of attributes could explain rank? We tried logistic regression, a linear formula combining all attributes. "
         "But the AUC stayed near 0.5, no better than flipping a coin."
     )
 
-    # ──────────────────────────────────────────────────────────────
-    # AUC heat-map (pulled directly from STATS so it stays accurate)
-    # ──────────────────────────────────────────────────────────────
     lr_auc = pd.DataFrame({p: [STATS[p]["auc"]] for p in STATS.keys()},
                           index=["LogReg"])
 
@@ -954,9 +879,6 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
         </small>
         """, unsafe_allow_html=True)
 
-    # ──────────────────────────────────────────────────────────────
-    # ROC curve (TPR vs FPR) with dots along the path
-    # ──────────────────────────────────────────────────────────────
     st.markdown("##### ROC curve – how well does the model separate the classes?")
     prob_demo = {
         "Facebook": DATA_DIR / "fb_val_probs.csv",
@@ -971,17 +893,16 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
 
     csv_path = prob_demo.get(plat_choice, "")
     if os.path.exists(csv_path):
-        demo_df = pd.read_csv(csv_path)  # needs cols: y (0/1), p (prob)
+        demo_df = pd.read_csv(csv_path)  
 
-        # ---- compute ROC points ---------------------------------------------------
-        from sklearn.metrics import roc_curve, auc  # sklearn ships with Streamlit cloud
+        from sklearn.metrics import roc_curve, auc  
 
         fpr, tpr, _ = roc_curve(demo_df["y"], demo_df["p"])
         roc_auc = auc(fpr, tpr)
 
         fig_roc, ax_roc = plt.subplots(figsize=(3.8, 3.8))
         ax_roc.plot(fpr, tpr, lw=2, label=f"ROC (AUC {roc_auc:.3f})")
-        # draw a few threshold dots so users see the curve is built from probs
+
         dots = np.linspace(0, len(fpr) - 1, 6, dtype=int)
         ax_roc.scatter(fpr[dots], tpr[dots], color="#4c78a8", s=22, zorder=5)
         ax_roc.plot([0, 1], [0, 1], "--", color="grey", lw=1)
@@ -1000,11 +921,8 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
     else:
         st.info(f"Add a CSV with validation probabilities for {plat_choice} to show its ROC curve.")
 
-    # ──────────────────────────────────────────────────────────────
-    # Probability-overlap violin (kept from your code)
-    # ──────────────────────────────────────────────────────────────
     if os.path.exists(csv_path):
-        demo_df = pd.read_csv(csv_path)  # y , p
+        demo_df = pd.read_csv(csv_path)  
         fig_sep, ax_sep = plt.subplots(figsize=(4, 2.4))
         sns.violinplot(data=demo_df, x="y", y="p", inner="quartile",
                        palette=["#f58518", "#4c78a8"], ax=ax_sep)
@@ -1019,7 +937,6 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
     else:
         st.info("No validation-probability CSV found – skipping the overlap plot.")
 
-    # 3 ▸ Random forest
     st.markdown("### 🌳 Random forest")
     st.caption(
         "We thought: maybe it’s not linear. Maybe some caption attributes only matter when combined with others. "
@@ -1067,7 +984,6 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
     else:
         st.info(f"File {os.path.basename(rf_path)} missing – generate it first.")
 
-    # 4 ▸ Decision tree
     st.markdown("### 🌲 Decision tree")
     st.caption(
         "What if there’s a clean decision path? A hierarchy like: *If Keyword Density > X, then check CTA, then check Sentiment...*? We tried Decision Trees."
@@ -1109,7 +1025,6 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
     else:
         st.info(f"File {os.path.basename(dt_path)} missing – generate it first.")
 
-    # 5 ▸ Takeaway
     st.markdown("### 🎬 Final takeaway")
     st.info(
         "We tried it all. Simple stats, linear models, random forests, decision trees. Nothing could reliably predict Top-20 ranks just from captions. "
@@ -1144,17 +1059,12 @@ if st.checkbox("🎞️ Story-telling: The Full Journey of Caption Science",
         "[click here → 'an open letter to caption science and everything in between'](https://docs.google.com/document/d/1rdU5nuCuchRO3Y0r7Wc6oeJvtJ2DIcaeC5ZmJIij40k/edit?usp=sharing)"
     )
 
-
-    # ───────────────────────────────────────────
-    #  RAW DATA CORNER  •  for stats nerds 🙈
-    # ───────────────────────────────────────────
 if st.checkbox(
             "📂 Raw data & model coefficients",
             value=False,
             help="Opens a panel showing every CSV used plus the β/μ/σ tables.",
     ):
 
-        # ▼  give these widgets unique keys (or omit key=)
         plat_sel = st.selectbox(
             "Choose platform", ["Facebook", "Instagram", "TikTok"], key="dj_plat"
         )
@@ -1184,7 +1094,6 @@ if st.checkbox(
         else:
             st.error("File not found – double-check the path.")
 
-        # ── coefficients / means / stds ───────────────────────────────
         with st.expander(f"ℹ️  Model coefficients & {plat_sel} means"):
             s = STATS[plat_sel]
             coeff_df = pd.DataFrame({
@@ -1198,5 +1107,3 @@ if st.checkbox(
                 f"- **Intercept:** `{s['intercept']:+.4f}`  \n"
                 f"- **AUC (test):** `{s['auc']:.3f}`"
             )
-
-# End of file
