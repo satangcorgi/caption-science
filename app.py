@@ -745,12 +745,26 @@ if st.checkbox("📚 Insight dashboard", help=
 
     st.subheader("Rank-wise mean heat-map (z-scores)")
     z_cols = (dfraw[ORDER] - dfraw[ORDER].mean()) / dfraw[ORDER].std(ddof=0)
-    df_z = pd.concat([dfraw["Search Rank"], z_cols], axis=1)
-    hm_z = df_z.groupby("Search Rank")[ORDER].mean()
-    figH, axH = plt.subplots(figsize=(6, 6))
-    sns.heatmap(hm_z, cmap="coolwarm", center=0, vmin=-2.5, vmax=2.5,
-                cbar_kws=dict(label="mean z-score"), ax=axH)
-    axH.set_xlabel("Attribute"); axH.set_ylabel("Rank (1 = best)")
+    df_z = pd.concat([dfraw["Search Rank"].astype(int), z_cols], axis=1)
+    hm_z = df_z.groupby("Search Rank", as_index=True)[ORDER].mean().sort_index()
+    figH, axH = plt.subplots(figsize=(8, 5))
+    sns.heatmap(
+        hm_z.T,                      
+        cmap="coolwarm",
+        center=0,
+        vmin=-2.5, vmax=2.5,
+        cbar_kws=dict(label="mean z-score"),
+        ax=axH
+    )
+    ranks = hm_z.index.to_numpy()   # these are the columns after transpose
+    tick_locs = [i for i, r in enumerate(ranks) if r % 10 == 0]
+    tick_labels = [str(ranks[i]) for i in tick_locs]
+    axH.set_xticks(tick_locs)
+    axH.set_xticklabels(tick_labels, rotation=0)
+
+    axH.set_xlabel("Rank (1 = best)")
+    axH.set_ylabel("Attribute")
+
     st.pyplot(figH, clear_figure=True)
 
     st.caption(
